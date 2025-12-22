@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bahrain Electricity Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .calculator {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 32px;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .input-group {
+            margin-bottom: 24px;
+        }
+        
+        label {
+            display: block;
+            color: #555;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .result {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+            color: white;
+        }
+        
+        .result-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+        
+        .result-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .breakdown {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            font-size: 13px;
+        }
+        
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label span {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>⚡ Electricity Cost Calculator</h1>
+        <div class="subtitle">Bahrain Domestic Rates Comparison</div>
+        
+        <div class="input-group">
+            <label for="units">Enter Consumption Units:</label>
+            <input type="number" id="units" placeholder="e.g., 4500" min="0" step="1">
+        </div>
+        
+        <div class="input-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="subsidy">
+                <span>Government coverage (70 BD subsidy)</span>
+            </label>
+        </div>
+        
+        <div class="result">
+            <div class="result-label">Previous Rate (2019 Subsidy)</div>
+            <div class="result-value" id="totalCost">0 BD</div>
+            
+            <div class="breakdown" id="breakdown"></div>
+        </div>
+        
+        <div class="result" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); margin-top: 16px;">
+            <div class="result-label">Current Rate (Flat 18 fils/unit)</div>
+            <div class="result-value" id="currentCost">0 BD</div>
+            
+            <div class="breakdown" id="currentBreakdown"></div>
+        </div>
+    </div>
+    
+    <script>
+        const input = document.getElementById('units');
+        const subsidyCheckbox = document.getElementById('subsidy');
+        const totalCostEl = document.getElementById('totalCost');
+        const breakdownEl = document.getElementById('breakdown');
+        const currentCostEl = document.getElementById('currentCost');
+        const currentBreakdownEl = document.getElementById('currentBreakdown');
+        
+        function calculateCost(units) {
+            if (!units || units <= 0) {
+                return { total: 0, breakdown: [] };
+            }
+            
+            let cost = 0;
+            let breakdown = [];
+            
+            // First 3000 units at 3 fils (0.003 BD)
+            if (units <= 3000) {
+                cost = units * 0.003;
+                breakdown.push({ range: `${units} units × 3 fils`, cost: cost });
+            } else {
+                const first = 3000 * 0.003;
+                cost += first;
+                breakdown.push({ range: '3000 units × 3 fils', cost: first });
+                
+                // 3001-5000 units at 9 fils (0.009 BD)
+                if (units <= 5000) {
+                    const second = (units - 3000) * 0.009;
+                    cost += second;
+                    breakdown.push({ range: `${units - 3000} units × 9 fils`, cost: second });
+                } else {
+                    const second = 2000 * 0.009;
+                    cost += second;
+                    breakdown.push({ range: '2000 units × 9 fils', cost: second });
+                    
+                    // Above 5000 at 16 fils (0.016 BD)
+                    const third = (units - 5000) * 0.016;
+                    cost += third;
+                    breakdown.push({ range: `${units - 5000} units × 16 fils`, cost: third });
+                }
+            }
+            
+            return { total: cost, breakdown: breakdown };
+        }
+        
+        function calculateCurrentCost(units) {
+            if (!units || units <= 0) {
+                return { total: 0, breakdown: [] };
+            }
+            
+            const cost = units * 0.018; // 18 fils = 0.018 BD
+            const breakdown = [{ range: `${units} units × 18 fils`, cost: cost }];
+            
+            return { total: cost, breakdown: breakdown };
+        }
+        
+        function updateDisplay() {
+            const units = parseFloat(input.value) || 0;
+            const hasSubsidy = subsidyCheckbox.checked;
+            const subsidyAmount = 70; // 70 BD government coverage
+            
+            // Previous rate
+            const result = calculateCost(units);
+            const previousFinal = hasSubsidy ? Math.max(0, result.total - subsidyAmount) : result.total;
+            totalCostEl.textContent = `${previousFinal.toFixed(3)} BD`;
+            
+            if (result.breakdown.length > 0) {
+                let html = result.breakdown.map(item => 
+                    `<div class="breakdown-item">
+                        <span>${item.range}</span>
+                        <span>${item.cost.toFixed(3)} BD</span>
+                    </div>`
+                ).join('');
+                
+                if (hasSubsidy) {
+                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
+                        <span>Subtotal</span>
+                        <span>${result.total.toFixed(3)} BD</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Gov. Coverage</span>
+                        <span>-${subsidyAmount.toFixed(3)} BD</span>
+                    </div>
+                    <div class="breakdown-item" style="font-weight: bold;">
+                        <span>Your Cost</span>
+                        <span>${previousFinal.toFixed(3)} BD</span>
+                    </div>`;
+                }
+                
+                breakdownEl.innerHTML = html;
+            } else {
+                breakdownEl.innerHTML = '';
+            }
+            
+            // Current rate
+            const currentResult = calculateCurrentCost(units);
+            const currentFinal = hasSubsidy ? Math.max(0, currentResult.total - subsidyAmount) : currentResult.total;
+            currentCostEl.textContent = `${currentFinal.toFixed(3)} BD`;
+            
+            if (currentResult.breakdown.length > 0) {
+                const diff = currentFinal - previousFinal;
+                const diffText = diff > 0 ? `+${diff.toFixed(3)} BD more` : diff < 0 ? `${Math.abs(diff).toFixed(3)} BD less` : 'Same cost';
+                
+                let html = currentResult.breakdown.map(item => 
+                    `<div class="breakdown-item">
+                        <span>${item.range}</span>
+                        <span>${item.cost.toFixed(3)} BD</span>
+                    </div>`
+                ).join('');
+                
+                if (hasSubsidy) {
+                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
+                        <span>Subtotal</span>
+                        <span>${currentResult.total.toFixed(3)} BD</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Gov. Coverage</span>
+                        <span>-${subsidyAmount.toFixed(3)} BD</span>
+                    </div>
+                    <div class="breakdown-item" style="font-weight: bold;">
+                        <span>Your Cost</span>
+                        <span>${currentFinal.toFixed(3)} BD</span>
+                    </div>`;
+                }
+                
+                if (units > 0) {
+                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
+                        <span>Difference</span>
+                        <span>${diffText}</span>
+                    </div>`;
+                }
+                
+                currentBreakdownEl.innerHTML = html;
+            } else {
+                currentBreakdownEl.innerHTML = '';
+            }
+        }
+        
+        input.addEventListener('input', updateDisplay);
+        subsidyCheckbox.addEventListener('change', updateDisplay);
+        updateDisplay();
+    </script>
+</body>
+</html>
