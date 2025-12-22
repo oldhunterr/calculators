@@ -215,46 +215,28 @@
             const hasSubsidy = subsidyCheckbox.checked;
             const subsidyAmount = 70; // 70 BD government coverage
             
-            // Previous rate
+            // Previous rate (NO subsidy)
             const result = calculateCost(units);
-            const previousFinal = hasSubsidy ? Math.max(0, result.total - subsidyAmount) : result.total;
-            totalCostEl.textContent = `${previousFinal.toFixed(3)} BD`;
+            totalCostEl.textContent = `${result.total.toFixed(3)} BD`;
             
             if (result.breakdown.length > 0) {
-                let html = result.breakdown.map(item => 
+                breakdownEl.innerHTML = result.breakdown.map(item => 
                     `<div class="breakdown-item">
                         <span>${item.range}</span>
                         <span>${item.cost.toFixed(3)} BD</span>
                     </div>`
                 ).join('');
-                
-                if (hasSubsidy) {
-                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
-                        <span>Subtotal</span>
-                        <span>${result.total.toFixed(3)} BD</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span>Gov. Coverage</span>
-                        <span>-${subsidyAmount.toFixed(3)} BD</span>
-                    </div>
-                    <div class="breakdown-item" style="font-weight: bold;">
-                        <span>Your Cost</span>
-                        <span>${previousFinal.toFixed(3)} BD</span>
-                    </div>`;
-                }
-                
-                breakdownEl.innerHTML = html;
             } else {
                 breakdownEl.innerHTML = '';
             }
             
-            // Current rate
+            // Current rate (with optional subsidy)
             const currentResult = calculateCurrentCost(units);
             const currentFinal = hasSubsidy ? Math.max(0, currentResult.total - subsidyAmount) : currentResult.total;
             currentCostEl.textContent = `${currentFinal.toFixed(3)} BD`;
             
             if (currentResult.breakdown.length > 0) {
-                const diff = currentFinal - previousFinal;
+                const diff = currentFinal - result.total;
                 const diffText = diff > 0 ? `+${diff.toFixed(3)} BD more` : diff < 0 ? `${Math.abs(diff).toFixed(3)} BD less` : 'Same cost';
                 
                 let html = currentResult.breakdown.map(item => 
