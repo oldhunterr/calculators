@@ -502,13 +502,13 @@
                     breakdown.push({ range: `2000 ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
 
                     if (units <= 7000) {
-                        const third = (units - 5000) * 0.012;
+                        const third = (units - 5000) * 0.016;
                         cost += third;
-                        breakdown.push({ range: `${(units - 5000).toFixed(2)} ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
+                        breakdown.push({ range: `${(units - 5000).toFixed(2)} ${translations[currentLang].units} × 16 ${translations[currentLang].fils}`, cost: third });
                     } else {
-                        const third = 2000 * 0.012;
+                        const third = 2000 * 0.016;
                         cost += third;
-                        breakdown.push({ range: `2000 ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
+                        breakdown.push({ range: `2000 ${translations[currentLang].units} × 16 ${translations[currentLang].fils}`, cost: third });
                         
                         const fourth = (units - 7000) * 0.032;
                         cost += fourth;
