@@ -36,6 +36,37 @@
             width: 100%;
         }
         
+        .section-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: #f5f5f5;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        
+        .section-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .section-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
         .header {
             display: flex;
             justify-content: space-between;
@@ -183,10 +214,17 @@
 <body>
     <div class="calculator">
         <div class="header">
-            <h1 id="mainTitle">⚡ Electricity Calculator</h1>
+            <h1 id="mainTitle">⚡ Utilities Calculator</h1>
             <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn">العربية</button>
         </div>
         <div class="subtitle" id="subtitle">Bahrain Domestic Rates 2019-2026</div>
+        
+        <div class="section-tabs">
+            <button class="section-tab active" onclick="setSection('electricity')" id="electricityTab">⚡ <span id="electricityText">Electricity</span></button>
+            <button class="section-tab" onclick="setSection('water')" id="waterTab">💧 <span id="waterText">Water</span></button>
+        </div>
+        
+        <div id="electricitySection">
         
         <div class="calc-mode">
             <button class="mode-btn active" onclick="setMode('units')" id="unitsBtn">By Units</button>
@@ -221,52 +259,118 @@
             
             <div class="breakdown" id="currentBreakdown"></div>
         </div>
+        </div>
+        
+        <div id="waterSection" style="display:none;">
+        <div class="calc-mode">
+            <button class="mode-btn active" onclick="setMode('units')" id="waterUnitsBtn">By Units</button>
+            <button class="mode-btn" onclick="setMode('cost')" id="waterCostBtn">By Cost</button>
+        </div>
+        
+        <div class="input-group" id="waterUnitsInput">
+            <label for="waterUnits" id="waterUnitsLabel">Enter Water Consumption (m³):</label>
+            <input type="number" id="waterUnits" placeholder="e.g., 75" min="0" step="1">
+        </div>
+        
+        <div class="input-group" id="waterCostInput" style="display:none;">
+            <label for="waterCost" id="waterCostLabel">Enter Previous Water Cost (2019):</label>
+            <input type="number" id="waterCost" placeholder="e.g., 15.000" min="0" step="0.001">
+        </div>
+        
+        <div class="reverse-result" id="waterReverseResult" style="display:none;">
+            <div class="reverse-result-label" id="waterEstimatedLabel">Estimated Consumption (m³)</div>
+            <div class="reverse-result-value" id="waterEstimatedUnits">0</div>
+        </div>
+        
+        <div class="result">
+            <div class="result-label" id="waterPrevLabel">Previous Rate (2019)</div>
+            <div class="result-value" id="waterTotalCost">0 BD</div>
+            
+            <div class="breakdown" id="waterBreakdown"></div>
+        </div>
+        
+        <div class="result" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); margin-top: 16px;">
+            <div class="result-label" id="waterCurrentLabel">Current Rate (2026)</div>
+            <div class="result-value" id="waterCurrentCost">0 BD</div>
+            
+            <div class="breakdown" id="waterCurrentBreakdown"></div>
+        </div>
+        </div>
     </div>
     
     <script>
         let currentLang = 'en';
         let currentMode = 'units';
+        let currentSection = 'electricity';
         
         const translations = {
             en: {
-                mainTitle: '⚡ Electricity Calculator',
+                mainTitle: '⚡💧 Utilities Calculator',
                 subtitle: 'Bahrain Domestic Rates 2019-2026',
+                electricityText: 'Electricity',
+                waterText: 'Water',
                 unitsBtn: 'By Units',
                 costBtn: 'By Cost',
                 unitsLabel: 'Enter Consumption Units:',
                 costLabel: 'Enter Previous Cost (2019):',
+                waterUnitsLabel: 'Enter Water Consumption (m³):',
+                waterCostLabel: 'Enter Previous Water Cost (2019):',
                 estimatedLabel: 'Estimated Units',
+                waterEstimatedLabel: 'Estimated Consumption (m³)',
                 prevLabel: 'Previous Rate (2019 Subsidy)',
                 currentLabel: 'Current Rate (2026)',
+                waterPrevLabel: 'Previous Rate (2019)',
+                waterCurrentLabel: 'Current Rate (2026)',
                 unitsPlaceholder: 'e.g., 4500',
                 costPlaceholder: 'e.g., 25.500',
+                waterUnitsPlaceholder: 'e.g., 75',
+                waterCostPlaceholder: 'e.g., 15.000',
                 fils: 'fils',
                 units: 'units',
+                cubicMeters: 'm³',
                 more: 'more',
                 less: 'less',
                 difference: 'Difference',
                 sameCost: 'Same cost'
             },
             ar: {
-                mainTitle: '⚡ حاسبة الكهرباء',
+                mainTitle: '⚡💧 حاسبة المرافق',
                 subtitle: 'تعرفة البحرين المنزلية ٢٠١٩-٢٠٢٦',
+                electricityText: 'الكهرباء',
+                waterText: 'المياه',
                 unitsBtn: 'حسب الوحدات',
                 costBtn: 'حسب التكلفة',
                 unitsLabel: 'أدخل وحدات الاستهلاك:',
                 costLabel: 'أدخل التكلفة السابقة (٢٠١٩):',
+                waterUnitsLabel: 'أدخل استهلاك المياه (م³):',
+                waterCostLabel: 'أدخل تكلفة المياه السابقة (٢٠١٩):',
                 estimatedLabel: 'الوحدات المقدرة',
+                waterEstimatedLabel: 'الاستهلاك المقدر (م³)',
                 prevLabel: 'التعرفة السابقة (دعم ٢٠١٩)',
                 currentLabel: 'التعرفة الحالية (٢٠٢٦)',
+                waterPrevLabel: 'التعرفة السابقة (٢٠١٩)',
+                waterCurrentLabel: 'التعرفة الحالية (٢٠٢٦)',
                 unitsPlaceholder: 'مثال: ٤٥٠٠',
                 costPlaceholder: 'مثال: ٢٥.٥٠٠',
+                waterUnitsPlaceholder: 'مثال: ٧٥',
+                waterCostPlaceholder: 'مثال: ١٥.٠٠٠',
                 fils: 'فلس',
                 units: 'وحدة',
+                cubicMeters: 'م³',
                 more: 'أكثر',
                 less: 'أقل',
                 difference: 'الفرق',
                 sameCost: 'نفس التكلفة'
             }
         };
+        
+        function setSection(section) {
+            currentSection = section;
+            document.getElementById('electricityTab').classList.toggle('active', section === 'electricity');
+            document.getElementById('waterTab').classList.toggle('active', section === 'water');
+            document.getElementById('electricitySection').style.display = section === 'electricity' ? 'block' : 'none';
+            document.getElementById('waterSection').style.display = section === 'water' ? 'block' : 'none';
+        }
         
         function toggleLanguage() {
             currentLang = currentLang === 'en' ? 'ar' : 'en';
@@ -277,27 +381,49 @@
             const t = translations[currentLang];
             document.getElementById('mainTitle').textContent = t.mainTitle;
             document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('electricityText').textContent = t.electricityText;
+            document.getElementById('waterText').textContent = t.waterText;
             document.getElementById('unitsBtn').textContent = t.unitsBtn;
             document.getElementById('costBtn').textContent = t.costBtn;
+            document.getElementById('waterUnitsBtn').textContent = t.unitsBtn;
+            document.getElementById('waterCostBtn').textContent = t.costBtn;
             document.getElementById('unitsLabel').textContent = t.unitsLabel;
             document.getElementById('costLabel').textContent = t.costLabel;
+            document.getElementById('waterUnitsLabel').textContent = t.waterUnitsLabel;
+            document.getElementById('waterCostLabel').textContent = t.waterCostLabel;
             document.getElementById('estimatedLabel').textContent = t.estimatedLabel;
+            document.getElementById('waterEstimatedLabel').textContent = t.waterEstimatedLabel;
             document.getElementById('prevLabel').textContent = t.prevLabel;
             document.getElementById('currentLabel').textContent = t.currentLabel;
+            document.getElementById('waterPrevLabel').textContent = t.waterPrevLabel;
+            document.getElementById('waterCurrentLabel').textContent = t.waterCurrentLabel;
             document.getElementById('units').placeholder = t.unitsPlaceholder;
             document.getElementById('cost').placeholder = t.costPlaceholder;
+            document.getElementById('waterUnits').placeholder = t.waterUnitsPlaceholder;
+            document.getElementById('waterCost').placeholder = t.waterCostPlaceholder;
             
             updateDisplay();
+            updateWaterDisplay();
         }
         
         function setMode(mode) {
             currentMode = mode;
-            document.getElementById('unitsBtn').classList.toggle('active', mode === 'units');
-            document.getElementById('costBtn').classList.toggle('active', mode === 'cost');
-            document.getElementById('unitsInput').style.display = mode === 'units' ? 'block' : 'none';
-            document.getElementById('costInput').style.display = mode === 'cost' ? 'block' : 'none';
-            document.getElementById('reverseResult').style.display = mode === 'cost' ? 'block' : 'none';
-            updateDisplay();
+            
+            if (currentSection === 'electricity') {
+                document.getElementById('unitsBtn').classList.toggle('active', mode === 'units');
+                document.getElementById('costBtn').classList.toggle('active', mode === 'cost');
+                document.getElementById('unitsInput').style.display = mode === 'units' ? 'block' : 'none';
+                document.getElementById('costInput').style.display = mode === 'cost' ? 'block' : 'none';
+                document.getElementById('reverseResult').style.display = mode === 'cost' ? 'block' : 'none';
+                updateDisplay();
+            } else {
+                document.getElementById('waterUnitsBtn').classList.toggle('active', mode === 'units');
+                document.getElementById('waterCostBtn').classList.toggle('active', mode === 'cost');
+                document.getElementById('waterUnitsInput').style.display = mode === 'units' ? 'block' : 'none';
+                document.getElementById('waterCostInput').style.display = mode === 'cost' ? 'block' : 'none';
+                document.getElementById('waterReverseResult').style.display = mode === 'cost' ? 'block' : 'none';
+                updateWaterDisplay();
+            }
         }
         
         const unitsInput = document.getElementById('units');
@@ -307,6 +433,14 @@
         const currentCostEl = document.getElementById('currentCost');
         const currentBreakdownEl = document.getElementById('currentBreakdown');
         const estimatedUnitsEl = document.getElementById('estimatedUnits');
+        
+        const waterUnitsInput = document.getElementById('waterUnits');
+        const waterCostInput = document.getElementById('waterCost');
+        const waterTotalCostEl = document.getElementById('waterTotalCost');
+        const waterBreakdownEl = document.getElementById('waterBreakdown');
+        const waterCurrentCostEl = document.getElementById('waterCurrentCost');
+        const waterCurrentBreakdownEl = document.getElementById('waterCurrentBreakdown');
+        const waterEstimatedUnitsEl = document.getElementById('waterEstimatedUnits');
         
         function calculate2019Cost(units) {
             if (!units || units <= 0) {
@@ -318,7 +452,7 @@
             
             if (units <= 3000) {
                 cost = units * 0.003;
-                breakdown.push({ range: `${units} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost: cost });
+                breakdown.push({ range: `${units.toFixed(2)} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost: cost });
             } else {
                 const first = 3000 * 0.003;
                 cost += first;
@@ -327,7 +461,7 @@
                 if (units <= 5000) {
                     const second = (units - 3000) * 0.009;
                     cost += second;
-                    breakdown.push({ range: `${units - 3000} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
+                    breakdown.push({ range: `${(units - 3000).toFixed(2)} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
                 } else {
                     const second = 2000 * 0.009;
                     cost += second;
@@ -335,7 +469,7 @@
                     
                     const third = (units - 5000) * 0.016;
                     cost += third;
-                    breakdown.push({ range: `${units - 5000} ${translations[currentLang].units} × 16 ${translations[currentLang].fils}`, cost: third });
+                    breakdown.push({ range: `${(units - 5000).toFixed(2)} ${translations[currentLang].units} × 16 ${translations[currentLang].fils}`, cost: third });
                 }
             }
             
@@ -352,7 +486,7 @@
 
             if (units <= 3000) {
                 cost = units * 0.003;
-                breakdown.push({ range: `${units} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost });
+                breakdown.push({ range: `${units.toFixed(2)} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost });
             } else {
                 const first = 3000 * 0.003;
                 cost += first;
@@ -361,7 +495,7 @@
                 if (units <= 5000) {
                     const second = (units - 3000) * 0.009;
                     cost += second;
-                    breakdown.push({ range: `${units - 3000} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
+                    breakdown.push({ range: `${(units - 3000).toFixed(2)} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
                 } else {
                     const second = 2000 * 0.009;
                     cost += second;
@@ -370,7 +504,7 @@
                     if (units <= 7000) {
                         const third = (units - 5000) * 0.012;
                         cost += third;
-                        breakdown.push({ range: `${units - 5000} ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
+                        breakdown.push({ range: `${(units - 5000).toFixed(2)} ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
                     } else {
                         const third = 2000 * 0.012;
                         cost += third;
@@ -378,7 +512,7 @@
                         
                         const fourth = (units - 7000) * 0.032;
                         cost += fourth;
-                        breakdown.push({ range: `${units - 7000} ${translations[currentLang].units} × 32 ${translations[currentLang].fils}`, cost: fourth });
+                        breakdown.push({ range: `${(units - 7000).toFixed(2)} ${translations[currentLang].units} × 32 ${translations[currentLang].fils}`, cost: fourth });
                     }
                 }
             }
@@ -386,31 +520,98 @@
             return { total: cost, breakdown };
         }
         
-        function estimateUnitsFromCost(targetCost) {
-            if (!targetCost || targetCost <= 0) return 0;
+        function calculateWater2019Cost(cubic) {
+            if (!cubic || cubic <= 0) {
+                return { total: 0, breakdown: [] };
+            }
             
-            // Binary search for units
-            let low = 0;
-            let high = 50000;
-            let bestUnits = 0;
+            let cost = 0;
+            let breakdown = [];
             
-            while (low <= high) {
-                let mid = Math.floor((low + high) / 2);
-                let cost = calculate2019Cost(mid).total;
+            if (cubic <= 60) {
+                cost = cubic * 0.025;
+                breakdown.push({ range: `${cubic.toFixed(2)} ${translations[currentLang].cubicMeters} × 25 ${translations[currentLang].fils}`, cost: cost });
+            } else {
+                const first = 60 * 0.025;
+                cost += first;
+                breakdown.push({ range: `60 ${translations[currentLang].cubicMeters} × 25 ${translations[currentLang].fils}`, cost: first });
                 
-                if (Math.abs(cost - targetCost) < 0.001) {
-                    return mid;
-                }
-                
-                if (cost < targetCost) {
-                    bestUnits = mid;
-                    low = mid + 1;
+                if (cubic <= 100) {
+                    const second = (cubic - 60) * 0.080;
+                    cost += second;
+                    breakdown.push({ range: `${(cubic - 60).toFixed(2)} ${translations[currentLang].cubicMeters} × 80 ${translations[currentLang].fils}`, cost: second });
                 } else {
-                    high = mid - 1;
+                    const second = 40 * 0.080;
+                    cost += second;
+                    breakdown.push({ range: `40 ${translations[currentLang].cubicMeters} × 80 ${translations[currentLang].fils}`, cost: second });
+                    
+                    const third = (cubic - 100) * 0.200;
+                    cost += third;
+                    breakdown.push({ range: `${(cubic - 100).toFixed(2)} ${translations[currentLang].cubicMeters} × 200 ${translations[currentLang].fils}`, cost: third });
                 }
             }
             
-            return bestUnits;
+            return { total: cost, breakdown: breakdown };
+        }
+        
+        function calculateWater2026Cost(cubic) {
+            if (!cubic || cubic <= 0) {
+                return { total: 0, breakdown: [] };
+            }
+            
+            let cost = 0;
+            let breakdown = [];
+            
+            if (cubic <= 60) {
+                cost = cubic * 0.025;
+                breakdown.push({ range: `${cubic.toFixed(2)} ${translations[currentLang].cubicMeters} × 25 ${translations[currentLang].fils}`, cost: cost });
+            } else {
+                const first = 60 * 0.025;
+                cost += first;
+                breakdown.push({ range: `60 ${translations[currentLang].cubicMeters} × 25 ${translations[currentLang].fils}`, cost: first });
+                
+                if (cubic <= 100) {
+                    const second = (cubic - 60) * 0.080;
+                    cost += second;
+                    breakdown.push({ range: `${(cubic - 60).toFixed(2)} ${translations[currentLang].cubicMeters} × 80 ${translations[currentLang].fils}`, cost: second });
+                } else {
+                    const second = 40 * 0.080;
+                    cost += second;
+                    breakdown.push({ range: `40 ${translations[currentLang].cubicMeters} × 80 ${translations[currentLang].fils}`, cost: second });
+                    
+                    const third = (cubic - 100) * 0.775;
+                    cost += third;
+                    breakdown.push({ range: `${(cubic - 100).toFixed(2)} ${translations[currentLang].cubicMeters} × 775 ${translations[currentLang].fils}`, cost: third });
+                }
+            }
+            
+            return { total: cost, breakdown: breakdown };
+        }
+        
+        function estimateUnitsFromCost(targetCost) {
+            if (!targetCost || targetCost <= 0) return 0;
+            
+            // Determine which tier the cost falls into and calculate precise units
+            if (targetCost <= 9.000) { // First tier only (3000 units * 0.003)
+                return targetCost / 0.003;
+            } else if (targetCost <= 27.000) { // First + Second tier (9 + 18)
+                return 3000 + (targetCost - 9.000) / 0.009;
+            } else { // All three tiers
+                return 5000 + (targetCost - 27.000) / 0.016;
+            }
+        }
+        
+        function estimateWaterUnitsFromCost(targetCost) {
+            if (!targetCost || targetCost <= 0) return 0;
+            
+            // Determine which tier the cost falls into and calculate precise cubic meters
+            if (targetCost <= 1.500) { // First tier only (60 m³ * 0.025)
+                return targetCost / 0.025;
+            } else if (targetCost <= 4.700) { // First + Second tier (1.5 + 3.2)
+                return 60 + (targetCost - 1.500) / 0.080;
+            } else { // All three tiers
+                return 100 + (targetCost - 4.700) / 0.200;
+            }
         }
         
         function updateDisplay() {
@@ -422,10 +623,9 @@
             } else {
                 const cost = parseFloat(costInput.value) || 0;
                 units = estimateUnitsFromCost(cost);
-                estimatedUnitsEl.textContent = units > 0 ? units.toLocaleString() : '0';
+                estimatedUnitsEl.textContent = units > 0 ? units.toFixed(2) : '0';
             }
             
-            // Previous rate (2019)
             const result = calculate2019Cost(units);
             totalCostEl.textContent = `${result.total.toFixed(3)} BD`;
             
@@ -440,7 +640,6 @@
                 breakdownEl.innerHTML = '';
             }
             
-            // Current rate (2026)
             const currentResult = calculate2026Cost(units);
             currentCostEl.textContent = `${currentResult.total.toFixed(3)} BD`;
             
@@ -468,9 +667,65 @@
             }
         }
         
+        function updateWaterDisplay() {
+            const t = translations[currentLang];
+            let cubic = 0;
+            
+            if (currentMode === 'units') {
+                cubic = parseFloat(waterUnitsInput.value) || 0;
+            } else {
+                const cost = parseFloat(waterCostInput.value) || 0;
+                cubic = estimateWaterUnitsFromCost(cost);
+                waterEstimatedUnitsEl.textContent = cubic > 0 ? cubic.toFixed(2) : '0';
+            }
+            
+            const result = calculateWater2019Cost(cubic);
+            waterTotalCostEl.textContent = `${result.total.toFixed(3)} BD`;
+            
+            if (result.breakdown.length > 0) {
+                waterBreakdownEl.innerHTML = result.breakdown.map(item => 
+                    `<div class="breakdown-item">
+                        <span>${item.range}</span>
+                        <span>${item.cost.toFixed(3)} BD</span>
+                    </div>`
+                ).join('');
+            } else {
+                waterBreakdownEl.innerHTML = '';
+            }
+            
+            const currentResult = calculateWater2026Cost(cubic);
+            waterCurrentCostEl.textContent = `${currentResult.total.toFixed(3)} BD`;
+            
+            if (currentResult.breakdown.length > 0) {
+                const diff = currentResult.total - result.total;
+                const diffText = diff > 0 ? `+${diff.toFixed(3)} BD ${t.more}` : diff < 0 ? `${Math.abs(diff).toFixed(3)} BD ${t.less}` : t.sameCost;
+                
+                let html = currentResult.breakdown.map(item => 
+                    `<div class="breakdown-item">
+                        <span>${item.range}</span>
+                        <span>${item.cost.toFixed(3)} BD</span>
+                    </div>`
+                ).join('');
+                
+                if (cubic > 0) {
+                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
+                        <span>${t.difference}</span>
+                        <span>${diffText}</span>
+                    </div>`;
+                }
+                
+                waterCurrentBreakdownEl.innerHTML = html;
+            } else {
+                waterCurrentBreakdownEl.innerHTML = '';
+            }
+        }
+        
         unitsInput.addEventListener('input', updateDisplay);
         costInput.addEventListener('input', updateDisplay);
+        waterUnitsInput.addEventListener('input', updateWaterDisplay);
+        waterCostInput.addEventListener('input', updateWaterDisplay);
         updateDisplay();
+        updateWaterDisplay();
     </script>
 </body>
 </html>
