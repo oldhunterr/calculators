@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/calculators/ewa_favicon.png">
-    <title>Bahrain Electricity Calculator</title>
+    <title>Bahrain Electricity Calculator 2026</title>
     <style>
         * {
             margin: 0;
@@ -22,20 +22,47 @@
             padding: 20px;
         }
         
+        body.rtl {
+            direction: rtl;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+        
         .calculator {
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 32px;
-            max-width: 400px;
+            max-width: 450px;
             width: 100%;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         }
         
         h1 {
             color: #333;
             font-size: 24px;
-            margin-bottom: 8px;
-            text-align: center;
+            margin: 0;
+        }
+        
+        .lang-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .lang-toggle:hover {
+            transform: scale(1.05);
         }
         
         .subtitle {
@@ -43,6 +70,33 @@
             font-size: 14px;
             text-align: center;
             margin-bottom: 24px;
+        }
+        
+        .calc-mode {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: #f5f5f5;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         
         .input-group {
@@ -104,52 +158,65 @@
             opacity: 0.9;
         }
         
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            font-weight: 500;
+        .reverse-result {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            text-align: center;
         }
         
-        .checkbox-label input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+        .reverse-result-label {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 4px;
         }
         
-        .checkbox-label span {
-            color: #333;
+        .reverse-result-value {
+            color: #667eea;
+            font-size: 24px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="calculator">
-        <h1>⚡ Electricity Cost Calculator</h1>
-        <div class="subtitle">Bahrain Domestic Rates Comparison</div>
+        <div class="header">
+            <h1 id="mainTitle">⚡ Electricity Calculator</h1>
+            <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn">العربية</button>
+        </div>
+        <div class="subtitle" id="subtitle">Bahrain Domestic Rates 2019-2026</div>
         
-        <div class="input-group">
-            <label for="units">Enter Consumption Units:</label>
+        <div class="calc-mode">
+            <button class="mode-btn active" onclick="setMode('units')" id="unitsBtn">By Units</button>
+            <button class="mode-btn" onclick="setMode('cost')" id="costBtn">By Cost</button>
+        </div>
+        
+        <div class="input-group" id="unitsInput">
+            <label for="units" id="unitsLabel">Enter Consumption Units:</label>
             <input type="number" id="units" placeholder="e.g., 4500" min="0" step="1">
         </div>
         
-        <div class="input-group" style="display:none;">
-            <label class="checkbox-label">
-                <input type="checkbox" id="subsidy">
-                <span>Government coverage (70 BD subsidy)</span>
-            </label>
+        <div class="input-group" id="costInput" style="display:none;">
+            <label for="cost" id="costLabel">Enter Previous Cost (2019):</label>
+            <input type="number" id="cost" placeholder="e.g., 25.500" min="0" step="0.001">
         </div>
         
+        <div class="reverse-result" id="reverseResult" style="display:none;">
+            <div class="reverse-result-label" id="estimatedLabel">Estimated Units</div>
+            <div class="reverse-result-value" id="estimatedUnits">0</div>
+        </div>
         
         <div class="result">
-            <div class="result-label">Previous Rate (2019 Subsidy)</div>
+            <div class="result-label" id="prevLabel">Previous Rate (2019 Subsidy)</div>
             <div class="result-value" id="totalCost">0 BD</div>
             
             <div class="breakdown" id="breakdown"></div>
         </div>
         
         <div class="result" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); margin-top: 16px;">
-            <div class="result-label">Current Rate 2025</div>
+            <div class="result-label" id="currentLabel">Current Rate (2026)</div>
             <div class="result-value" id="currentCost">0 BD</div>
             
             <div class="breakdown" id="currentBreakdown"></div>
@@ -157,14 +224,91 @@
     </div>
     
     <script>
-        const input = document.getElementById('units');
-        const subsidyCheckbox = document.getElementById('subsidy');
+        let currentLang = 'en';
+        let currentMode = 'units';
+        
+        const translations = {
+            en: {
+                mainTitle: '⚡ Electricity Calculator',
+                subtitle: 'Bahrain Domestic Rates 2019-2026',
+                unitsBtn: 'By Units',
+                costBtn: 'By Cost',
+                unitsLabel: 'Enter Consumption Units:',
+                costLabel: 'Enter Previous Cost (2019):',
+                estimatedLabel: 'Estimated Units',
+                prevLabel: 'Previous Rate (2019 Subsidy)',
+                currentLabel: 'Current Rate (2026)',
+                unitsPlaceholder: 'e.g., 4500',
+                costPlaceholder: 'e.g., 25.500',
+                fils: 'fils',
+                units: 'units',
+                more: 'more',
+                less: 'less',
+                difference: 'Difference',
+                sameCost: 'Same cost'
+            },
+            ar: {
+                mainTitle: '⚡ حاسبة الكهرباء',
+                subtitle: 'تعرفة البحرين المنزلية ٢٠١٩-٢٠٢٦',
+                unitsBtn: 'حسب الوحدات',
+                costBtn: 'حسب التكلفة',
+                unitsLabel: 'أدخل وحدات الاستهلاك:',
+                costLabel: 'أدخل التكلفة السابقة (٢٠١٩):',
+                estimatedLabel: 'الوحدات المقدرة',
+                prevLabel: 'التعرفة السابقة (دعم ٢٠١٩)',
+                currentLabel: 'التعرفة الحالية (٢٠٢٦)',
+                unitsPlaceholder: 'مثال: ٤٥٠٠',
+                costPlaceholder: 'مثال: ٢٥.٥٠٠',
+                fils: 'فلس',
+                units: 'وحدة',
+                more: 'أكثر',
+                less: 'أقل',
+                difference: 'الفرق',
+                sameCost: 'نفس التكلفة'
+            }
+        };
+        
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            document.body.classList.toggle('rtl', currentLang === 'ar');
+            document.getElementById('langBtn').textContent = currentLang === 'en' ? 'العربية' : 'English';
+            
+            // Update all text
+            const t = translations[currentLang];
+            document.getElementById('mainTitle').textContent = t.mainTitle;
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('unitsBtn').textContent = t.unitsBtn;
+            document.getElementById('costBtn').textContent = t.costBtn;
+            document.getElementById('unitsLabel').textContent = t.unitsLabel;
+            document.getElementById('costLabel').textContent = t.costLabel;
+            document.getElementById('estimatedLabel').textContent = t.estimatedLabel;
+            document.getElementById('prevLabel').textContent = t.prevLabel;
+            document.getElementById('currentLabel').textContent = t.currentLabel;
+            document.getElementById('units').placeholder = t.unitsPlaceholder;
+            document.getElementById('cost').placeholder = t.costPlaceholder;
+            
+            updateDisplay();
+        }
+        
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('unitsBtn').classList.toggle('active', mode === 'units');
+            document.getElementById('costBtn').classList.toggle('active', mode === 'cost');
+            document.getElementById('unitsInput').style.display = mode === 'units' ? 'block' : 'none';
+            document.getElementById('costInput').style.display = mode === 'cost' ? 'block' : 'none';
+            document.getElementById('reverseResult').style.display = mode === 'cost' ? 'block' : 'none';
+            updateDisplay();
+        }
+        
+        const unitsInput = document.getElementById('units');
+        const costInput = document.getElementById('cost');
         const totalCostEl = document.getElementById('totalCost');
         const breakdownEl = document.getElementById('breakdown');
         const currentCostEl = document.getElementById('currentCost');
         const currentBreakdownEl = document.getElementById('currentBreakdown');
+        const estimatedUnitsEl = document.getElementById('estimatedUnits');
         
-        function calculateCost(units) {
+        function calculate2019Cost(units) {
             if (!units || units <= 0) {
                 return { total: 0, breakdown: [] };
             }
@@ -172,80 +316,117 @@
             let cost = 0;
             let breakdown = [];
             
-            // First 3000 units at 3 fils (0.003 BD)
             if (units <= 3000) {
                 cost = units * 0.003;
-                breakdown.push({ range: `${units} units × 3 fils`, cost: cost });
+                breakdown.push({ range: `${units} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost: cost });
             } else {
                 const first = 3000 * 0.003;
                 cost += first;
-                breakdown.push({ range: '3000 units × 3 fils', cost: first });
+                breakdown.push({ range: `3000 ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost: first });
                 
-                // 3001-5000 units at 9 fils (0.009 BD)
                 if (units <= 5000) {
                     const second = (units - 3000) * 0.009;
                     cost += second;
-                    breakdown.push({ range: `${units - 3000} units × 9 fils`, cost: second });
+                    breakdown.push({ range: `${units - 3000} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
                 } else {
                     const second = 2000 * 0.009;
                     cost += second;
-                    breakdown.push({ range: '2000 units × 9 fils', cost: second });
+                    breakdown.push({ range: `2000 ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
                     
-                    // Above 5000 at 16 fils (0.016 BD)
                     const third = (units - 5000) * 0.016;
                     cost += third;
-                    breakdown.push({ range: `${units - 5000} units × 16 fils`, cost: third });
+                    breakdown.push({ range: `${units - 5000} ${translations[currentLang].units} × 16 ${translations[currentLang].fils}`, cost: third });
                 }
             }
             
             return { total: cost, breakdown: breakdown };
         }
         
-        function calculateCurrentCost(units) {
-    if (!units || units <= 0) {
-        return { total: 0, breakdown: [] };
-    }
+        function calculate2026Cost(units) {
+            if (!units || units <= 0) {
+                return { total: 0, breakdown: [] };
+            }
 
-    let cost = 0;
-    let breakdown = [];
+            let cost = 0;
+            let breakdown = [];
 
-    // First 3000 units at 3 fils
-    if (units <= 3000) {
-        cost = units * 0.003;
-        breakdown.push({ range: `${units} units × 3 fils`, cost });
-    } else {
-        const first = 3000 * 0.003;
-        cost += first;
-        breakdown.push({ range: '3000 units × 3 fils', cost: first });
+            if (units <= 3000) {
+                cost = units * 0.003;
+                breakdown.push({ range: `${units} ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost });
+            } else {
+                const first = 3000 * 0.003;
+                cost += first;
+                breakdown.push({ range: `3000 ${translations[currentLang].units} × 3 ${translations[currentLang].fils}`, cost: first });
 
-        // 3001–5000 at 9 fils
-        if (units <= 5000) {
-            const second = (units - 3000) * 0.009;
-            cost += second;
-            breakdown.push({ range: `${units - 3000} units × 9 fils`, cost: second });
-        } else {
-            const second = 2000 * 0.009;
-            cost += second;
-            breakdown.push({ range: '2000 units × 9 fils', cost: second });
+                if (units <= 5000) {
+                    const second = (units - 3000) * 0.009;
+                    cost += second;
+                    breakdown.push({ range: `${units - 3000} ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
+                } else {
+                    const second = 2000 * 0.009;
+                    cost += second;
+                    breakdown.push({ range: `2000 ${translations[currentLang].units} × 9 ${translations[currentLang].fils}`, cost: second });
 
-            // Above 5000 at 32 fils
-            const third = (units - 5000) * 0.032;
-            cost += third;
-            breakdown.push({ range: `${units - 5000} units × 32 fils`, cost: third });
+                    if (units <= 7000) {
+                        const third = (units - 5000) * 0.012;
+                        cost += third;
+                        breakdown.push({ range: `${units - 5000} ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
+                    } else {
+                        const third = 2000 * 0.012;
+                        cost += third;
+                        breakdown.push({ range: `2000 ${translations[currentLang].units} × 12 ${translations[currentLang].fils}`, cost: third });
+                        
+                        const fourth = (units - 7000) * 0.032;
+                        cost += fourth;
+                        breakdown.push({ range: `${units - 7000} ${translations[currentLang].units} × 32 ${translations[currentLang].fils}`, cost: fourth });
+                    }
+                }
+            }
+
+            return { total: cost, breakdown };
         }
-    }
-
-    return { total: cost, breakdown };
-}
-
+        
+        function estimateUnitsFromCost(targetCost) {
+            if (!targetCost || targetCost <= 0) return 0;
+            
+            // Binary search for units
+            let low = 0;
+            let high = 50000;
+            let bestUnits = 0;
+            
+            while (low <= high) {
+                let mid = Math.floor((low + high) / 2);
+                let cost = calculate2019Cost(mid).total;
+                
+                if (Math.abs(cost - targetCost) < 0.001) {
+                    return mid;
+                }
+                
+                if (cost < targetCost) {
+                    bestUnits = mid;
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            
+            return bestUnits;
+        }
         
         function updateDisplay() {
-            const units = parseFloat(input.value) || 0;
-            const hasSubsidy = subsidyCheckbox.checked;
-            const subsidyAmount = 70; // 70 BD government coverage
+            const t = translations[currentLang];
+            let units = 0;
             
-            // Previous rate (NO subsidy)
-            const result = calculateCost(units);
+            if (currentMode === 'units') {
+                units = parseFloat(unitsInput.value) || 0;
+            } else {
+                const cost = parseFloat(costInput.value) || 0;
+                units = estimateUnitsFromCost(cost);
+                estimatedUnitsEl.textContent = units > 0 ? units.toLocaleString() : '0';
+            }
+            
+            // Previous rate (2019)
+            const result = calculate2019Cost(units);
             totalCostEl.textContent = `${result.total.toFixed(3)} BD`;
             
             if (result.breakdown.length > 0) {
@@ -259,14 +440,13 @@
                 breakdownEl.innerHTML = '';
             }
             
-            // Current rate (with optional subsidy)
-            const currentResult = calculateCurrentCost(units);
-            const currentFinal = hasSubsidy ? Math.max(0, currentResult.total - subsidyAmount) : currentResult.total;
-            currentCostEl.textContent = `${currentFinal.toFixed(3)} BD`;
+            // Current rate (2026)
+            const currentResult = calculate2026Cost(units);
+            currentCostEl.textContent = `${currentResult.total.toFixed(3)} BD`;
             
             if (currentResult.breakdown.length > 0) {
-                const diff = currentFinal - result.total;
-                const diffText = diff > 0 ? `+${diff.toFixed(3)} BD more` : diff < 0 ? `${Math.abs(diff).toFixed(3)} BD less` : 'Same cost';
+                const diff = currentResult.total - result.total;
+                const diffText = diff > 0 ? `+${diff.toFixed(3)} BD ${t.more}` : diff < 0 ? `${Math.abs(diff).toFixed(3)} BD ${t.less}` : t.sameCost;
                 
                 let html = currentResult.breakdown.map(item => 
                     `<div class="breakdown-item">
@@ -275,24 +455,9 @@
                     </div>`
                 ).join('');
                 
-                if (hasSubsidy) {
-                    html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
-                        <span>Subtotal</span>
-                        <span>${currentResult.total.toFixed(3)} BD</span>
-                    </div>
-                    <div class="breakdown-item">
-                        <span>Gov. Coverage</span>
-                        <span>-${subsidyAmount.toFixed(3)} BD</span>
-                    </div>
-                    <div class="breakdown-item" style="font-weight: bold;">
-                        <span>Your Cost</span>
-                        <span>${currentFinal.toFixed(3)} BD</span>
-                    </div>`;
-                }
-                
                 if (units > 0) {
                     html += `<div class="breakdown-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
-                        <span>Difference</span>
+                        <span>${t.difference}</span>
                         <span>${diffText}</span>
                     </div>`;
                 }
@@ -303,8 +468,8 @@
             }
         }
         
-        input.addEventListener('input', updateDisplay);
-        subsidyCheckbox.addEventListener('change', updateDisplay);
+        unitsInput.addEventListener('input', updateDisplay);
+        costInput.addEventListener('input', updateDisplay);
         updateDisplay();
     </script>
 </body>
