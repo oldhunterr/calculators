@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculators</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --border:#2a3550; --text:#e7ecf7;
+    --muted:#9fb0cf; --accent:#c9a24b; --accent2:#8fb2ff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+    background:linear-gradient(180deg,#0b1120,#111a2e); color:var(--text);
+    padding:32px 20px; line-height:1.5;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+  h1{font-size:1.6rem; margin:0 0 6px;}
+  .sub{color:var(--muted); font-size:.9rem; margin-bottom:24px;}
+  ul{list-style:none; padding:0; margin:0; display:grid; gap:10px;}
+  li a{
+    display:block; background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; color:var(--text); text-decoration:none; transition:.15s border-color;
+  }
+  li a:hover{border-color:var(--accent);}
+  li a .name{font-weight:600; color:var(--accent2);}
+  li a .path{display:block; font-size:.78rem; color:var(--muted); margin-top:2px;}
+  .empty, .error{color:var(--muted); font-size:.9rem;}
+  .error{color:#ff8a8a;}
+  footer{margin-top:28px; font-size:.78rem; color:var(--muted);}
+  footer a{color:var(--accent2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📐 Calculators</h1>
+  <div class="sub">Auto-generated list — pulls every .html file in this repo from the GitHub API.</div>
+  <ul id="list"><li class="empty">Loading…</li></ul>
+  <footer>Source: <a href="https://github.com/oldhunterr/calculators" target="_blank">github.com/oldhunterr/calculators</a></footer>
+</div>
+
+<script>
+const REPO = "oldhunterr/calculators";
+const BRANCH = "master";
+
+async function loadList(){
+  const listEl = document.getElementById('list');
+  try{
+    // recursive tree listing — picks up files in subfolders too
+    const res = await fetch(`https://api.github.com/repos/${REPO}/git/trees/${BRANCH}?recursive=1`);
+    if(!res.ok) throw new Error('GitHub API returned ' + res.status);
+    const data = await res.json();
+    const files = (data.tree || [])
+      .filter(f => f.type === 'blob' && f.path.toLowerCase().endsWith('.html'))
+      .filter(f => f.path.toLowerCase() !== 'index.html'); // don't list itself
+
+    if(files.length === 0){
+      listEl.innerHTML = '<li class="empty">No calculators found yet.</li>';
+      return;
+    }
+
+    files.sort((a,b)=>a.path.localeCompare(b.path));
+    listEl.innerHTML = files.map(f=>{
+      const name = f.path.split('/').pop().replace(/\.html$/,'')
+        .replace(/[-_]/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+      return `<li><a href="${f.path}"><span class="name">${name}</span><span class="path">${f.path}</span></a></li>`;
+    }).join('');
+  } catch(err){
+    listEl.innerHTML = '<li class="error">Could not load file list (' + err.message + '). '
+      + 'GitHub\'s public API is rate-limited to 60 requests/hour per IP — try again shortly, '
+      + 'or edit this page to list files manually.</li>';
+  }
+}
+loadList();
+</script>
+</body>
+</html>
