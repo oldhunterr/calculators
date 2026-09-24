@@ -61,7 +61,8 @@
 
 <script>
 const USER = "oldhunterr", REPO = "calculators", BRANCH = "master";
-const CDN_BASE = `https://cdn.jsdelivr.net/gh/${USER}/${REPO}@${BRANCH}/`;
+// Using GitHub's raw content endpoint for metadata fetches
+const RAW_BASE = `https://raw.githubusercontent.com/${USER}/${REPO}/${BRANCH}/`;
 
 const UI = {
   en: {title:"📐 Calculators", sub:"Auto-generated from this repo — each entry reads its own title/description from its HTML file.",
@@ -81,6 +82,7 @@ function applyLangChrome(){
   document.getElementById('search').placeholder = t.search;
   document.getElementById('langToggle').textContent = t.langBtn;
 }
+
 function toggleLang(){
   lang = (lang === 'en') ? 'ar' : 'en';
   localStorage.setItem('idxLang', lang);
@@ -109,13 +111,15 @@ function extractMeta(html, path){
 
 async function loadList(){
   try{
-    const treeRes = await fetch(`https://data.jsdelivr.com/v1/packages/gh/${USER}/${REPO}@${BRANCH}?structure=flat`);
-    if(!treeRes.ok) throw new Error('jsDelivr listing returned ' + treeRes.status);
-    const tree = await treeRes.json();
-    const files = (tree.files || [])
-      .filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.html'))
-      .filter(f => f.name.replace(/^\//,'').toLowerCase() !== 'index.html')
-      .map(f => f.name.replace(/^\//,''));
+    // Query GitHub API's tree endpoint recursively
+    const treeRes = await fetch(`https://api.github.com/repos/${USER}/${REPO}/git/trees/${BRANCH}?recursive=1`);
+    if(!treeRes.ok) throw new Error('GitHub API returned ' + treeRes.status);
+    
+    const data = await treeRes.json();
+    const files = (data.tree || [])
+      .filter(f => f.type === 'blob' && f.path.toLowerCase().endsWith('.html'))
+      .filter(f => f.path.toLowerCase() !== 'index.html')
+      .map(f => f.path);
 
     if(files.length === 0){
       items = [];
@@ -123,16 +127,17 @@ async function loadList(){
       return;
     }
 
-    items = await Promise.all(files.map(async path=>{
+    items = await Promise.all(files.map(async path => {
       try{
-        const res = await fetch(CDN_BASE + path);
+        const res = await fetch(RAW_BASE + path);
         const html = await res.text();
         return extractMeta(html, path);
       }catch(e){
         return {path, titleEn: path, titleAr:null, descEn:null, descAr:null, icon:'📄'};
       }
     }));
-    items.sort((a,b)=> (a.titleEn||a.path).localeCompare(b.titleEn||b.path));
+    
+    items.sort((a,b) => (a.titleEn || a.path).localeCompare(b.titleEn || b.path));
     renderList();
   }catch(err){
     document.getElementById('list').innerHTML =
@@ -145,7 +150,7 @@ function renderList(){
   const t = UI[lang];
   const q = (document.getElementById('search').value || '').toLowerCase();
 
-  const filtered = items.filter(it=>{
+  const filtered = items.filter(it => {
     const hay = [it.titleEn, it.titleAr, it.descEn, it.descAr, it.path].filter(Boolean).join(' ').toLowerCase();
     return hay.includes(q);
   });
@@ -155,7 +160,7 @@ function renderList(){
     return;
   }
 
-  listEl.innerHTML = filtered.map(it=>{
+  listEl.innerHTML = filtered.map(it => {
     const title = (lang === 'ar' && it.titleAr) ? it.titleAr : it.titleEn;
     const desc = (lang === 'ar' && it.descAr) ? it.descAr : (it.descEn || '');
     return `<li><a href="${it.path}">
