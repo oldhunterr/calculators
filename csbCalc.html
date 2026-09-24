@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bahrain Civil Service — Salary & Allowances Calculator</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --panel2:#1a2236; --border:#2a3550;
+    --text:#e7ecf7; --muted:#9fb0cf; --accent:#c9a24b; --accent2:#8fb2ff;
+    --good:#4ade80; --pad:16px; --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Segoe UI",Tahoma,Arial,sans-serif; background:linear-gradient(180deg,#0b1120,#111a2e);
+    color:var(--text); padding:24px; line-height:1.5;
+  }
+  .wrap{max-width:1080px; margin:0 auto;}
+  h1{font-size:1.5rem; margin:0 0 4px;}
+  .sub{color:var(--muted); font-size:.9rem; margin-bottom:20px;}
+  .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:20px;}
+  @media (max-width:860px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:var(--pad); margin-bottom:16px;}
+  .card h2{font-size:1.05rem; margin:0 0 12px; color:var(--accent2); display:flex; align-items:center; gap:8px;}
+  label{display:block; font-size:.85rem; color:var(--muted); margin:10px 0 4px;}
+  select, input[type=number]{
+    width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:.95rem;
+  }
+  select:disabled, input:disabled{opacity:.4; cursor:not-allowed;}
+  .row{display:flex; align-items:center; gap:8px; margin:10px 0 4px;}
+  .row input[type=checkbox]{width:17px; height:17px; accent-color:var(--accent);}
+  .row label{margin:0; font-size:.9rem; color:var(--text);}
+  .radios{display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 4px;}
+  .radios label{display:flex; align-items:center; gap:6px; color:var(--text); font-size:.85rem; margin:0;}
+  .indent{margin-inline-start:25px; border-inline-start:2px solid var(--border); padding-inline-start:12px; transition:opacity .15s;}
+  .indent.off{opacity:.35; pointer-events:none;}
+  .row label{cursor:pointer;} .row input{cursor:pointer;}
+  .note{font-size:.78rem; color:var(--muted); margin-top:6px;}
+  .note a{color:var(--accent2);}
+  .result{background:var(--panel2); border:1px solid var(--border); border-radius:var(--radius); padding:var(--pad);}
+  .line{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--border); font-size:.92rem;}
+  .line span:last-child{font-variant-numeric:tabular-nums;}
+  .total{display:flex; justify-content:space-between; padding-top:12px; margin-top:6px; border-top:2px solid var(--accent); font-size:1.25rem; font-weight:700;}
+  .total span:last-child{color:var(--good);}
+  .unavailable{color:var(--muted); font-style:italic; font-size:.8rem;}
+  .pill{display:inline-block; background:#2a3550; color:var(--accent2); font-size:.7rem; padding:2px 8px; border-radius:999px; margin-inline-start:6px;}
+  footer{margin-top:20px; font-size:.78rem; color:var(--muted);}
+  footer a{color:var(--accent2);}
+  .warn{background:#3a2a12; border:1px solid #7a5a1f; color:#ffd98a; border-radius:10px; padding:10px 12px; font-size:.82rem; margin-bottom:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bahrain Civil Service Bureau — Salary &amp; Allowances Calculator</h1>
+  <div class="sub">Basic pay from the 9 official CSB salary scales, plus the Social, Housing (external‑contract) and Expatriation allowance tables.</div>
+
+  <div class="warn">
+    Figures were transcribed from the official CSB PDFs (<a href="https://csb.gov.bh/dataStatistics/Data/Payroll-Basic" target="_blank" style="color:#ffd98a">Payroll‑Basic</a> /
+    <a href="https://csb.gov.bh/dataStatistics/Data/Allowances" target="_blank" style="color:#ffd98a">Allowances</a>), plus a separately-sourced Cost‑of‑Living rate table. All figures were cross‑checked
+    for internal consistency (arithmetic step progressions), but please verify against the source PDFs before relying on this for anything official.
+  </div>
+
+  <div class="grid">
+    <!-- CONFIG -->
+    <div>
+      <div class="card">
+        <h2>⚙️ Basic Salary</h2>
+        <label for="scale">Salary scale</label>
+        <select id="scale"></select>
+
+        <label for="grade">Grade (الدرجة)</label>
+        <select id="grade"></select>
+
+        <label for="step">Step / Rank (الرتبة)</label>
+        <select id="step"></select>
+        <div class="note" id="stepWarn" style="display:none; color:#ffd98a;"></div>
+        <div class="note" id="scaleNote"></div>
+      </div>
+
+      <div class="card">
+        <h2>👪 Social Allowance <span class="pill">A02</span></h2>
+        <div class="row"><input type="checkbox" id="socOn"><label for="socOn">Include social allowance</label></div>
+        <div class="indent" id="socBox">
+          <div class="radios">
+            <label><input type="radio" name="socCat" value="0" checked> Married</label>
+            <label><input type="radio" name="socCat" value="1"> Single</label>
+          </div>
+          <div class="unavailable" id="socUnavail"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🏠 Housing Allowance <span class="pill">A03 — external contract only</span></h2>
+        <div class="row"><input type="checkbox" id="houOn"><label for="houOn">I'm on an external/foreign‑service contract</label></div>
+        <div class="indent" id="houBox">
+          <div class="radios" id="houRadios">
+            <label><input type="radio" name="houCat" value="0" checked> Married, 2+ children</label>
+            <label><input type="radio" name="houCat" value="1"> Married, 0–1 child</label>
+            <label><input type="radio" name="houCat" value="2"> Single</label>
+          </div>
+          <div class="note">Applies only to employees hired on external contracts; married rate requires the spouse/family to have joined the employee in Bahrain. See the <a href="https://csb.gov.bh/MediaManager/Media/Documents/SalaryScales/A03-Eskan_allow_AR.pdf" target="_blank">official PDF</a>.</div>
+          <div class="unavailable" id="houUnavail"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>✈️ Expatriation Allowance <span class="pill">A04</span></h2>
+        <div class="row"><input type="checkbox" id="expOn"><label for="expOn">Include expatriation allowance</label></div>
+        <div class="indent" id="expBox">
+          <div class="radios">
+            <label><input type="radio" name="expRegion" value="eu" checked> Western Europe / Australia / New Zealand</label>
+            <label><input type="radio" name="expRegion" value="na"> North America (USA / Canada)</label>
+          </div>
+          <div class="note">Only defined (in the source PDF) for General, Professional, Executive and Education scales, and only from certain grades upward. See the <a href="https://csb.gov.bh/MediaManager/Media/Documents/SalaryScales/A04-indu-allow-2013.pdf" target="_blank">official PDF</a>.</div>
+          <div class="unavailable" id="expUnavail"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📈 Cost‑of‑Living Allowance <span class="pill">A01</span></h2>
+        <div class="row"><input type="checkbox" id="colOn"><label for="colOn">Include cost‑of‑living allowance</label></div>
+        <div class="indent">
+          <div class="note" id="colAutoNote"></div>
+          <div id="colManualWrap" style="display:none;">
+            <label for="colAmt">Amount (BHD/month)</label>
+            <input type="number" id="colAmt" min="0" step="0.001" value="0">
+            <div class="note">Not published for this scale/grade in the official rate table — enter manually if you know your rate.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div>
+      <div class="card result" style="position:sticky; top:16px;">
+        <h2 style="color:var(--accent)">💰 Estimated Monthly Pay</h2>
+        <div class="line"><span>Basic salary</span><span id="rBasic">—</span></div>
+        <div class="line"><span>Social allowance</span><span id="rSoc">—</span></div>
+        <div class="line"><span>Housing allowance</span><span id="rHou">—</span></div>
+        <div class="line"><span>Expatriation allowance</span><span id="rExp">—</span></div>
+        <div class="line"><span>Cost‑of‑living allowance</span><span id="rCol">—</span></div>
+        <div class="total"><span>Total</span><span id="rTotal">—</span></div>
+        <div class="note" style="margin-top:10px;">All amounts in Bahraini Dinar (BHD) per month.</div>
+      </div>
+
+      <div class="card">
+        <h2>🐞 Debug</h2>
+        <div class="row"><input type="checkbox" id="dbgOn"><label for="dbgOn">Show calculation trace</label></div>
+        <pre id="dbgOut" style="display:none; white-space:pre-wrap; font-size:.78rem; background:#0a0f1c; border:1px solid var(--border); border-radius:8px; padding:10px; margin-top:8px; max-height:400px; overflow:auto;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Data sources: CSB <a href="https://csb.gov.bh/dataStatistics/Data/Payroll-Basic" target="_blank">basic salary tables</a> (9 scales) and
+    <a href="https://csb.gov.bh/dataStatistics/Data/Allowances" target="_blank">allowance tables</a> (cost‑of‑living, social, housing, expatriation).
+    This tool is an independent, unofficial calculator — always confirm figures against the official CSB documents.
+  </footer>
+</div>
+
+<script>
+/* ---------- Basic salary scales (ascending, index 0 = minimum) ---------- */
+const SCALES = {
+  gen_regular: { label:"General Jobs — Regular (Table 1)", note:"36 hrs/week.",
+    grades:{2:[["8",322],["9",327],["10",332],["11",337],["12",342],["13",347],["14",352],["15",357]],
+      3:[["3",327],["4",333],["5",339],["6",345],["7",351],["8",357],["9",363],["10",369],["11",375],["12",381],["13",387],["14",393],["15",399]],
+      4:[["Min",348],["1",354],["2",360],["3",366],["4",372],["5",378],["6",384],["7",390],["8",396],["9",402],["10",408],["11",414],["12",420],["13",426],["14",432],["15",438]],
+      5:[["Min",377],["1",386],["2",395],["3",404],["4",413],["5",422],["6",431],["7",440],["8",449],["9",458],["10",467],["11",476],["12",485],["13",494],["14",503],["15",512]],
+      6:[["Min",420],["1",430],["2",440],["3",450],["4",460],["5",470],["6",480],["7",490],["8",500],["9",510],["10",520],["11",530],["12",540],["13",550],["14",560],["15",570]],
+      7:[["Min",467],["1",479],["2",491],["3",503],["4",515],["5",527],["6",539],["7",551],["8",563],["9",575],["10",587],["11",599],["12",611],["13",623],["14",635],["15",647]],
+      8:[["Min",526],["1",540],["2",554],["3",568],["4",582],["5",596],["6",610],["7",624],["8",638],["9",652],["10",666],["11",680],["12",694],["13",708],["14",722],["15",736]],
+      9:[["Min",616],["1",633],["2",650],["3",667],["4",684],["5",701],["6",718],["7",735],["8",752],["9",769],["10",786],["11",803],["12",820],["13",837],["14",854],["15",871]],
+      10:[["Min",768],["1",789],["2",810],["3",831],["4",852],["5",873],["6",894],["7",915],["8",936],["9",957],["10",978],["11",999],["12",1020],["13",1041],["14",1062],["15",1083]]}},
+  gen_shift: { label:"General Jobs — Shift System (Table 2)", note:"Shift work / extended hours.",
+    grades:{2:[["8",346],["9",351],["10",356],["11",361],["12",366],["13",371],["14",376],["15",381]],
+      3:[["3",358],["4",364],["5",370],["6",376],["7",382],["8",388],["9",394],["10",400],["11",406],["12",412],["13",418],["14",424],["15",430]],
+      4:[["Min",377],["1",384],["2",391],["3",398],["4",405],["5",412],["6",419],["7",426],["8",433],["9",440],["10",447],["11",454],["12",461],["13",468],["14",475],["15",482]],
+      5:[["Min",409],["1",419],["2",429],["3",439],["4",449],["5",459],["6",469],["7",479],["8",489],["9",499],["10",509],["11",519],["12",529],["13",539],["14",549],["15",559]],
+      6:[["Min",460],["1",471],["2",482],["3",493],["4",504],["5",515],["6",526],["7",537],["8",548],["9",559],["10",570],["11",581],["12",592],["13",603],["14",614],["15",625]],
+      7:[["Min",518],["1",531],["2",544],["3",557],["4",570],["5",583],["6",596],["7",609],["8",622],["9",635],["10",648],["11",661],["12",674],["13",687],["14",700],["15",713]],
+      8:[["Min",584],["1",599],["2",614],["3",629],["4",644],["5",659],["6",674],["7",689],["8",704],["9",719],["10",734],["11",749],["12",764],["13",779],["14",794],["15",809]],
+      9:[["Min",680],["1",699],["2",718],["3",737],["4",756],["5",775],["6",794],["7",813],["8",832],["9",851],["10",870],["11",889],["12",908],["13",927],["14",946],["15",965]],
+      10:[["Min",853],["1",876],["2",899],["3",922],["4",945],["5",968],["6",991],["7",1014],["8",1037],["9",1060],["10",1083],["11",1106],["12",1129],["13",1152],["14",1175],["15",1198]]}},
+  prof_regular: { label:"Professional/Specialist Jobs — Regular (Table 3)", note:"36 hrs/week.",
+    grades:{1:[["Min",440],["1",453],["2",466],["3",479],["4",492],["5",505],["6",518],["7",531],["8",544],["9",557],["10",570],["11",583],["12",596],["13",609],["14",622],["15",635]],
+      2:[["Min",547],["1",565],["2",583],["3",601],["4",619],["5",637],["6",655],["7",673],["8",691],["9",709],["10",727],["11",745],["12",763],["13",781],["14",799],["15",817]],
+      3:[["Min",650],["1",671],["2",692],["3",713],["4",734],["5",755],["6",776],["7",797],["8",818],["9",839],["10",860],["11",881],["12",902],["13",923],["14",944],["15",965]],
+      4:[["Min",765],["1",791],["2",817],["3",843],["4",869],["5",895],["6",921],["7",947],["8",973],["9",999],["10",1025],["11",1051],["12",1077],["13",1103],["14",1129],["15",1155]],
+      5:[["Min",893],["1",922],["2",951],["3",980],["4",1009],["5",1038],["6",1067],["7",1096],["8",1125],["9",1154],["10",1183],["11",1212],["12",1241],["13",1270],["14",1299],["15",1328]],
+      6:[["Min",1003],["1",1036],["2",1069],["3",1102],["4",1135],["5",1168],["6",1201],["7",1234],["8",1267],["9",1300],["10",1333],["11",1366],["12",1399],["13",1432],["14",1465],["15",1498]],
+      7:[["Min",1124],["1",1161],["2",1198],["3",1235],["4",1272],["5",1309],["6",1346],["7",1383],["8",1420],["9",1457],["10",1494],["11",1531],["12",1568],["13",1605],["14",1642],["15",1679]],
+      8:[["Min",1256],["1",1297],["2",1338],["3",1379],["4",1420],["5",1461],["6",1502],["7",1543],["8",1584],["9",1625],["10",1666],["11",1707],["12",1748],["13",1789],["14",1830],["15",1871]],
+      9:[["Min",1382],["1",1427],["2",1472],["3",1517],["4",1562],["5",1607],["6",1652],["7",1697],["8",1742],["9",1787],["10",1832],["11",1877],["12",1922],["13",1967],["14",2012],["15",2057]],
+      10:[["Min",1513],["1",1562],["2",1611],["3",1660],["4",1709],["5",1758],["6",1807],["7",1856],["8",1905],["9",1954],["10",2003],["11",2052],["12",2101],["13",2150],["14",2199],["15",2248]]}},
+  prof_shift: { label:"Professional/Specialist Jobs — Shift System (Table 4)", note:"Shift work / extended hours.",
+    grades:{1:[["Min",483],["1",498],["2",513],["3",528],["4",543],["5",558],["6",573],["7",588],["8",603],["9",618],["10",633],["11",648],["12",663],["13",678],["14",693],["15",708]],
+      2:[["Min",605],["1",625],["2",645],["3",665],["4",685],["5",705],["6",725],["7",745],["8",765],["9",785],["10",805],["11",825],["12",845],["13",865],["14",885],["15",905]],
+      3:[["Min",724],["1",747],["2",770],["3",793],["4",816],["5",839],["6",862],["7",885],["8",908],["9",931],["10",954],["11",977],["12",1000],["13",1023],["14",1046],["15",1069]],
+      4:[["Min",853],["1",881],["2",909],["3",937],["4",965],["5",993],["6",1021],["7",1049],["8",1077],["9",1105],["10",1133],["11",1161],["12",1189],["13",1217],["14",1245],["15",1273]],
+      5:[["Min",991],["1",1024],["2",1057],["3",1090],["4",1123],["5",1156],["6",1189],["7",1222],["8",1255],["9",1288],["10",1321],["11",1354],["12",1387],["13",1420],["14",1453],["15",1486]],
+      6:[["Min",1115],["1",1151],["2",1187],["3",1223],["4",1259],["5",1295],["6",1331],["7",1367],["8",1403],["9",1439],["10",1475],["11",1511],["12",1547],["13",1583],["14",1619],["15",1655]],
+      7:[["Min",1252],["1",1293],["2",1334],["3",1375],["4",1416],["5",1457],["6",1498],["7",1539],["8",1580],["9",1621],["10",1662],["11",1703],["12",1744],["13",1785],["14",1826],["15",1867]],
+      8:[["Min",1395],["1",1440],["2",1485],["3",1530],["4",1575],["5",1620],["6",1665],["7",1710],["8",1755],["9",1800],["10",1845],["11",1890],["12",1935],["13",1980],["14",2025],["15",2070]],
+      9:[["Min",1537],["1",1587],["2",1637],["3",1687],["4",1737],["5",1787],["6",1837],["7",1887],["8",1937],["9",1987],["10",2037],["11",2087],["12",2137],["13",2187],["14",2237],["15",2287]],
+      10:[["Min",1679],["1",1734],["2",1789],["3",1844],["4",1899],["5",1954],["6",2009],["7",2064],["8",2119],["9",2174],["10",2229],["11",2284],["12",2339],["13",2394],["14",2449],["15",2504]]}},
+  judges: { label:"Judges (Table 5)", note:"Judicial grade holders excluding court judges and public prosecution members.",
+    grades:{1:[["Min",765],["1",791],["2",817],["3",843],["4",869],["5",895],["6",921],["7",947],["8",973],["9",999],["10",1025],["11",1051],["12",1077],["13",1103],["14",1129],["15",1155]],
+      2:[["Min",893],["1",922],["2",951],["3",980],["4",1009],["5",1038],["6",1067],["7",1096],["8",1125],["9",1154],["10",1183],["11",1212],["12",1241],["13",1270],["14",1299],["15",1328]],
+      3:[["Min",1003],["1",1036],["2",1069],["3",1102],["4",1135],["5",1168],["6",1201],["7",1234],["8",1267],["9",1300],["10",1333],["11",1366],["12",1399],["13",1432],["14",1465],["15",1498]],
+      4:[["Min",1124],["1",1161],["2",1198],["3",1235],["4",1272],["5",1309],["6",1346],["7",1383],["8",1420],["9",1457],["10",1494],["11",1531],["12",1568],["13",1605],["14",1642],["15",1679]],
+      5:[["Min",1262],["1",1302],["2",1342],["3",1382],["4",1422],["5",1462],["6",1502],["7",1542],["8",1582],["9",1622],["10",1662],["11",1702],["12",1742],["13",1782],["14",1822],["15",1862]],
+      6:[["Min",1382],["1",1427],["2",1472],["3",1517],["4",1562],["5",1607],["6",1652],["7",1697],["8",1742],["9",1787],["10",1832],["11",1877],["12",1922],["13",1967],["14",2012],["15",2057]],
+      7:[["Min",1513],["1",1562],["2",1611],["3",1660],["4",1709],["5",1758],["6",1807],["7",1856],["8",1905],["9",1954],["10",2003],["11",2052],["12",2101],["13",2150],["14",2199],["15",2248]],
+      8:[["Min",1662],["1",1716],["2",1770],["3",1824],["4",1878],["5",1932],["6",1986],["7",2040],["8",2094],["9",2148],["10",2202],["11",2256],["12",2310],["13",2364],["14",2418],["15",2472]]}},
+  executive: { label:"Executive Jobs (Table 6)", note:"",
+    grades:{1:[["Min",847],["1",875],["2",903],["3",931],["4",959],["5",987],["6",1015],["7",1043],["8",1071],["9",1099],["10",1127],["11",1155],["12",1183],["13",1211],["14",1239],["15",1267]],
+      2:[["Min",1039],["1",1073],["2",1107],["3",1141],["4",1175],["5",1209],["6",1243],["7",1277],["8",1311],["9",1345],["10",1379],["11",1413],["12",1447],["13",1481],["14",1515],["15",1549]],
+      3:[["Min",1300],["1",1343],["2",1386],["3",1429],["4",1472],["5",1515],["6",1558],["7",1601],["8",1644],["9",1687],["10",1730],["11",1773],["12",1816],["13",1859],["14",1902],["15",1945]],
+      4:[["Min",1569],["1",1620],["2",1671],["3",1722],["4",1773],["5",1824],["6",1875],["7",1926],["8",1977],["9",2028],["10",2079],["11",2130],["12",2181],["13",2232],["14",2283],["15",2334]],
+      5:[["Min",1830],["1",1890],["2",1950],["3",2010],["4",2070],["5",2130],["6",2190],["7",2250],["8",2310],["9",2370],["10",2430],["11",2490],["12",2550],["13",2610],["14",2670],["15",2730]],
+      6:[["Min",2139],["1",2210],["2",2281],["3",2352],["4",2423],["5",2494],["6",2565],["7",2636],["8",2707],["9",2778],["10",2849],["11",2920],["12",2991],["13",3062],["14",3133],["15",3204]],
+      7:[["Min",2611],["1",2697],["2",2783],["3",2869],["4",2955],["5",3041],["6",3127],["7",3213],["8",3299],["9",3385],["10",3471],["11",3557],["12",3643],["13",3729],["14",3815],["15",3901]]}},
+  education: { label:"Education Jobs (Table 7)", note:"",
+    grades:{1:[["Min",328],["1",337],["2",346],["3",355],["4",364],["5",373],["6",382],["7",391],["8",400],["9",409],["10",418],["11",427],["12",436],["13",445],["14",454],["15",463]],
+      2:[["Min",404],["1",415],["2",426],["3",437],["4",448],["5",459],["6",470],["7",481],["8",492],["9",503],["10",514],["11",525],["12",536],["13",547],["14",558],["15",569]],
+      3:[["Min",488],["1",502],["2",516],["3",530],["4",544],["5",558],["6",572],["7",586],["8",600],["9",614],["10",628],["11",642],["12",656],["13",670],["14",684],["15",698]],
+      4:[["Min",581],["1",598],["2",615],["3",632],["4",649],["5",666],["6",683],["7",700],["8",717],["9",734],["10",751],["11",768],["12",785],["13",802],["14",819],["15",836]],
+      5:[["Min",688],["1",708],["2",728],["3",748],["4",768],["5",788],["6",808],["7",828],["8",848],["9",868],["10",888],["11",908],["12",928],["13",948],["14",968],["15",988]],
+      6:[["Min",803],["1",826],["2",849],["3",872],["4",895],["5",918],["6",941],["7",964],["8",987],["9",1010],["10",1033],["11",1056],["12",1079],["13",1102],["14",1125],["15",1148]],
+      7:[["Min",926],["1",953],["2",980],["3",1007],["4",1034],["5",1061],["6",1088],["7",1115],["8",1142],["9",1169],["10",1196],["11",1223],["12",1250],["13",1277],["14",1304],["15",1331]],
+      8:[["Min",1055],["1",1085],["2",1115],["3",1145],["4",1175],["5",1205],["6",1235],["7",1265],["8",1295],["9",1325],["10",1355],["11",1385],["12",1415],["13",1445],["14",1475],["15",1505]],
+      9:[["Min",1185],["1",1219],["2",1253],["3",1287],["4",1321],["5",1355],["6",1389],["7",1423],["8",1457],["9",1491],["10",1525],["11",1559],["12",1593],["13",1627],["14",1661],["15",1695]],
+      10:[["Min",1361],["1",1399],["2",1437],["3",1475],["4",1513],["5",1551],["6",1589],["7",1627],["8",1665],["9",1703],["10",1741],["11",1779],["12",1817],["13",1855],["14",1893],["15",1931]]}},
+  diplomatic: { label:"Diplomatic & Consular Jobs (Table 8)", note:"",
+    grades:{1:[["Min",575],["1",593],["2",611],["3",629],["4",647],["5",665],["6",683],["7",701],["8",719],["9",737],["10",755],["11",773],["12",791],["13",809],["14",827],["15",845]],
+      2:[["Min",672],["1",693],["2",714],["3",735],["4",756],["5",777],["6",798],["7",819],["8",840],["9",861],["10",882],["11",903],["12",924],["13",945],["14",966],["15",987]],
+      3:[["Min",809],["1",835],["2",861],["3",887],["4",913],["5",939],["6",965],["7",991],["8",1017],["9",1043],["10",1069],["11",1095],["12",1121],["13",1147],["14",1173],["15",1199]],
+      4:[["Min",977],["1",1007],["2",1037],["3",1067],["4",1097],["5",1127],["6",1157],["7",1187],["8",1217],["9",1247],["10",1277],["11",1307],["12",1337],["13",1367],["14",1397],["15",1427]],
+      5:[["Min",1172],["1",1209],["2",1246],["3",1283],["4",1320],["5",1357],["6",1394],["7",1431],["8",1468],["9",1505],["10",1542],["11",1579],["12",1616],["13",1653],["14",1690],["15",1727]],
+      6:[["Min",1416],["1",1460],["2",1504],["3",1548],["4",1592],["5",1636],["6",1680],["7",1724],["8",1768],["9",1812],["10",1856],["11",1900],["12",1944],["13",1988],["14",2032],["15",2076]],
+      7:[["Min",1706],["1",1759],["2",1812],["3",1865],["4",1918],["5",1971],["6",2024],["7",2077],["8",2130],["9",2183],["10",2236],["11",2289],["12",2342],["13",2395],["14",2448],["15",2501]],
+      8:[["Min",2051],["1",2116],["2",2181],["3",2246],["4",2311],["5",2376],["6",2441],["7",2506],["8",2571],["9",2636],["10",2701],["11",2766],["12",2831],["13",2896],["14",2961],["15",3026]],
+      9:[["Min",2473],["1",2550],["2",2627],["3",2704],["4",2781],["5",2858],["6",2935],["7",3012],["8",3089],["9",3166],["10",3243],["11",3320],["12",3397],["13",3474],["14",3551],["15",3628]]}},
+  higher_ed: { label:"Higher Education Jobs (Table 9)", note:"Step numbering runs 1–23 in the source table; only the populated steps are listed here. No social/housing/expatriation tables were found for this scale.",
+    grades:{1:[["1",618],["2",638],["3",658],["4",678],["5",698],["6",718],["7",738],["8",758],["9",778],["10",798]],
+      2:[["1",909],["2",938],["3",967],["4",996],["5",1025],["6",1054],["7",1083],["8",1112],["9",1141],["10",1170]],
+      3:[["1",944],["2",979],["3",1014],["4",1049],["5",1084],["6",1119],["7",1154],["8",1189],["9",1224],["10",1259],["11",1294],["12",1329],["13",1364],["14",1399],["15",1434],["16",1469],["17",1504],["18",1539],["19",1574],["20",1609]],
+      4:[["1",1034],["2",1080],["3",1126],["4",1172],["5",1218],["6",1264],["7",1310],["8",1356],["9",1402],["10",1448],["11",1494],["12",1540],["13",1586],["14",1632],["15",1678],["16",1724],["17",1770],["18",1816],["19",1862],["20",1908]],
+      5:[["1",1214],["2",1272],["3",1330],["4",1388],["5",1446],["6",1504],["7",1562],["8",1620],["9",1678],["10",1736],["11",1794],["12",1852],["13",1910],["14",1968],["15",2026],["16",2084],["17",2142],["18",2200],["19",2258],["20",2316]],
+      6:[["1",1286],["2",1355],["3",1424],["4",1493],["5",1562],["6",1631],["7",1700],["8",1769],["9",1838],["10",1907],["11",1976],["12",2045],["13",2114],["14",2183],["15",2252],["16",2321],["17",2390],["18",2459],["19",2528],["20",2597]],
+      7:[["1",1482],["2",1569],["3",1656],["4",1743],["5",1830],["6",1917],["7",2004],["8",2091],["9",2178],["10",2265],["11",2352],["12",2439],["13",2526],["14",2613],["15",2700],["16",2787],["17",2874],["18",2961],["19",3048],["20",3135],["21",3222],["22",3309],["23",3396]],
+      8:[["1",1762],["2",1866],["3",1970],["4",2074],["5",2178],["6",2282],["7",2386],["8",2490],["9",2594],["10",2698],["11",2802],["12",2906],["13",3010],["14",3114],["15",3218],["16",3322],["17",3426],["18",3530],["19",3634],["20",3738],["21",3842],["22",3946],["23",4050]]}}
+};
+
+/* ---------- Social allowance (A02): [Category1, Category2] per grade, null = not defined ---------- */
+const SOCIAL = {
+  gen_regular:{1:null,2:[30,20],3:[30,20],4:[40,26],5:[40,26],6:[40,26],7:[50,32],8:[50,32],9:[50,32],10:[70,44]},
+  gen_shift:{1:null,2:[30,20],3:[30,20],4:[40,26],5:[40,26],6:[40,26],7:[50,32],8:[50,32],9:[50,32],10:[70,44]},
+  prof_regular:{1:[50,32],2:[50,32],3:[70,44],4:[70,44],5:[70,44],6:[70,44],7:[100,60],8:[120,80],9:[120,80],10:[150,100]},
+  prof_shift:{1:[50,32],2:[50,32],3:[70,44],4:[70,44],5:[70,44],6:[70,44],7:[100,60],8:[120,80],9:[120,80],10:[150,100]},
+  judges:{1:[70,44],2:[70,44],3:[70,44],4:[70,44],5:[120,80],6:[120,80],7:[120,80],8:[150,100]},
+  executive:{1:[70,44],2:[100,60],3:[120,80],4:[150,100],5:[150,100],6:[150,100],7:[150,100]},
+  education:{1:[40,26],2:[40,26],3:[50,32],4:[50,32],5:[70,44],6:[70,44],7:[70,44],8:[70,44],9:[70,44],10:[100,60]},
+  diplomatic:{1:[50,32],2:[50,32],3:[70,44],4:[70,44],5:[100,60],6:[120,80],7:[150,100],8:[150,100],9:[150,100]},
+  higher_ed:null
+};
+
+/* ---------- Housing allowance for external-contract employees (A03): [married2+, married0-1, single] ---------- */
+const HOUSING = {
+  gen_regular:{1:[null,null,35],2:[null,null,35],3:[null,null,35],4:[null,null,35],5:[null,null,40],6:[null,null,40],7:[130,110,80],8:[130,110,80],9:[250,200,100],10:[250,200,100]},
+  gen_shift:{1:[null,null,35],2:[null,null,35],3:[null,null,35],4:[null,null,35],5:[null,null,40],6:[null,null,40],7:[130,110,80],8:[130,110,80],9:[250,200,100],10:[250,200,100]},
+  prof_regular:{1:[250,200,100],2:[250,200,100],3:[250,200,100],4:[250,200,100],5:[300,250,150],6:[300,250,150],7:[350,300,200],8:[350,300,200],9:[400,350,250],10:[400,350,250]},
+  prof_shift:{1:[250,200,100],2:[250,200,100],3:[250,200,100],4:[250,200,100],5:[300,250,150],6:[300,250,150],7:[350,300,200],8:[350,300,200],9:[400,350,250],10:[400,350,250]},
+  judges:{1:[250,200,100],2:[250,200,100],3:[300,250,150],4:[300,250,150],5:[350,300,200],6:[350,300,200],7:[400,350,250],8:[400,350,250]},
+  executive:{1:[300,250,150],2:[350,300,200],3:[350,300,200],4:[400,350,250],5:[400,350,250]},
+  education:{1:[null,null,60],2:[130,110,80],3:[130,110,80],4:[130,110,80],5:[250,200,100],6:[250,200,100],7:[300,250,150],8:[300,250,150],9:[350,300,200],10:[350,300,200]},
+  diplomatic:null,
+  higher_ed:null
+};
+
+/* ---------- Expatriation allowance (A04): region -> grade -> ascending array (index aligned with basic-salary step index) ---------- */
+const EXP_GEN = {
+  eu:{7:[160,166,171,176,182,187,193,198,203,209,214,220,225,230,236,241],
+      8:[191,198,205,211,218,224,231,238,244,251,257,264,271,277,284,290],
+      9:[228,236,245,253,262,270,278,287,295,300,300,300,300,300,300,300],
+      10:[290,300,300,300,300,300,300,300,300,300,300,300,300,300,300,300]},
+  na:{7:[267,276,285,294,303,312,321,330,339,348,357,366,375,384,393,402],
+      8:[319,330,341,352,363,374,385,396,407,418,429,440,451,462,473,484],
+      9:[380,394,408,422,436,450,464,478,492,506,520,534,548,562,576,590],
+      10:[484,501,518,535,552,569,586,603,620,637,654,671,688,705,722,739]}
+};
+const EXP_PROF = {
+  eu:{1:[123,128,132,136,141,145,150,154,158,163,167,172,176,180,185,189],
+      2:[162,168,174,179,185,190,196,202,207,213,218,224,230,235,241,246],
+      3:[198,204,211,218,225,232,238,245,252,259,266,272,279,286,293,300],
+      4:[234,242,250,258,266,274,282,290,298,300,300,300,300,300,300,300],
+      5:[272,282,291,300,300,300,300,300,300,300,300,300,300,300,300,300],
+      6:Array(16).fill(300),7:Array(16).fill(300),8:Array(16).fill(300),9:Array(16).fill(300),10:Array(16).fill(300)},
+  na:{1:[154,160,165,171,176,182,187,193,198,204,209,215,220,226,231,237],
+      2:[203,210,217,224,231,238,245,252,259,266,273,280,287,294,301,308],
+      3:[247,256,264,273,281,290,298,307,315,324,332,341,349,358,366,375],
+      4:[293,303,313,323,333,343,353,363,373,383,393,403,413,423,433,443],
+      5:[341,352,364,375,387,398,410,421,433,444,456,467,479,490,502,513],
+      6:[384,398,411,425,438,452,465,479,492,506,519,533,546,560,573,587],
+      7:[432,447,462,477,492,507,522,537,552,567,582,597,612,627,642,657],
+      8:[483,499,516,532,549,565,582,598,615,631,648,664,681,697,714,730],
+      9:[530,549,567,586,604,623,641,660,678,697,715,734,752,771,789,808],
+      10:[581,601,621,641,661,681,701,721,741,761,781,801,821,841,861,881]}
+};
+const EXP_EXEC = {
+  eu:{1:[219,226,234,242,250,257,265,273,280,288,296,300,300,300,300,300],
+      2:[268,277,287,296,300,300,300,300,300,300,300,300,300,300,300,300],
+      3:Array(16).fill(300),4:Array(16).fill(300),5:Array(16).fill(300)},
+  na:{1:[313,324,335,346,357,368,379,390,401,412,423,434,445,456,467,478],
+      2:[383,396,410,423,437,450,464,477,491,504,518,531,545,558,572,585],
+      3:[480,497,514,531,548,565,582,599,616,633,650,667,684,701,718,735],
+      4:[578,598,619,639,660,680,701,721,742,762,783,803,824,844,865,885],
+      5:[675,699,723,747,771,795,819,843,867,891,915,939,963,987,1011,1035]}
+};
+const EXP_EDU = {
+  eu:{3:[156,161,167,172,178,183,189,194,200,205,211,216,222,227,233,238],
+      4:[189,196,203,210,217,224,231,238,245,252,259,266,273,280,287,294],
+      5:[227,235,243,251,259,267,275,283,291,299,300,300,300,300,300,300],
+      6:[265,275,284,294,300,300,300,300,300,300,300,300,300,300,300,300],
+      7:Array(16).fill(300),8:Array(16).fill(300),9:Array(16).fill(300),10:Array(16).fill(300)},
+  na:{3:[264,274,283,292,302,311,320,330,339,349,358,367,377,386,395,405],
+      4:[320,332,344,356,368,380,392,404,416,428,439,451,463,475,487,499],
+      5:[386,400,413,427,440,454,468,481,495,508,522,536,549,563,576,590],
+      6:[451,467,483,499,515,531,547,564,580,596,612,628,644,660,677,693],
+      7:[519,537,556,575,593,612,631,649,668,687,706,724,743,762,780,799],
+      8:[589,610,632,653,674,695,717,738,759,780,802,823,844,865,887,908],
+      9:[663,687,711,734,758,782,806,830,853,877,901,925,949,972,996,1020],
+      10:[766,792,819,845,871,898,924,950,977,1003,1029,1056,1082,1108,1135,1161]}
+};
+const EXPAT = {
+  gen_regular:EXP_GEN, gen_shift:EXP_GEN, prof_regular:EXP_PROF, prof_shift:EXP_PROF,
+  executive:EXP_EXEC, education:EXP_EDU, judges:null, diplomatic:null, higher_ed:null
+};
+
+/* ---------- Cost-of-Living Improvement Allowance: flat monthly BHD rate per grade (not per step) ---------- */
+const COST_OF_LIVING = {
+  gen_regular:{1:null,2:100,3:100,4:100,5:100,6:100,7:100,8:100,9:85,10:85},
+  gen_shift:{1:null,2:100,3:100,4:100,5:100,6:100,7:100,8:100,9:85,10:85},
+  prof_regular:{1:100,2:100,3:85,4:85,5:85,6:85,7:85,8:85,9:null,10:null},
+  prof_shift:{1:100,2:100,3:85,4:85,5:85,6:85,7:85,8:85,9:null,10:null},
+  judges:{1:85,2:85,3:85,4:85,5:85,6:null,7:null,8:null},
+  executive:{1:85,2:85,3:85,4:null,5:null,6:null,7:null},
+  education:{1:100,2:100,3:100,4:100,5:85,6:85,7:85,8:85,9:85,10:85},
+  diplomatic:{1:100,2:85,3:85,4:85,5:85,6:85,7:null,8:null,9:null},
+  higher_ed:null
+};
+
+/* ---------- UI wiring ---------- */
+const $ = id => document.getElementById(id);
+const scaleSel = $('scale'), gradeSel = $('grade'), stepSel = $('step');
+
+Object.entries(SCALES).forEach(([key,s])=>{
+  const o = document.createElement('option'); o.value=key; o.textContent=s.label; scaleSel.appendChild(o);
+});
+
+function fmt(n){ return n===null||n===undefined ? '—' : n.toLocaleString(undefined,{minimumFractionDigits:3,maximumFractionDigits:3})+' BHD'; }
+
+function populateGrades(){
+  const s = SCALES[scaleSel.value];
+  gradeSel.innerHTML='';
+  Object.keys(s.grades).map(Number).sort((a,b)=>a-b).forEach(g=>{
+    const o=document.createElement('option'); o.value=g; o.textContent='Grade '+g; gradeSel.appendChild(o);
+  });
+  $('scaleNote').textContent = s.note||'';
+  populateSteps();
+}
+function populateSteps(){
+  const scaleKey = scaleSel.value;
+  const s = SCALES[scaleKey]; const g = gradeSel.value;
+  const arr = s.grades[g]; stepSel.innerHTML='';
+  const hasUnverified = arr.some(([lbl]) => lbl.endsWith('?'));
+
+  const warnEl = $('stepWarn');
+  if(hasUnverified){
+    warnEl.textContent = '⚠ The source PDF only lists '+arr.length+' values for this grade with no marker for which steps are missing. Labels ending in "?" are NOT confirmed — edit them in the code once you\'ve checked the official PDF.';
+    warnEl.style.display='block';
+  } else { warnEl.style.display='none'; }
+
+  arr.forEach(([lbl,val],i)=>{
+    const o=document.createElement('option'); o.value=i;
+    o.textContent = 'Step '+lbl+' — '+val.toLocaleString()+' BHD';
+    stepSel.appendChild(o);
+  });
+}
+scaleSel.addEventListener('change', ()=>{populateGrades(); calc();});
+gradeSel.addEventListener('change', ()=>{populateSteps(); calc();});
+stepSel.addEventListener('change', calc);
+
+['socOn','houOn','expOn','colOn'].forEach(id=>$(id).addEventListener('change', calc));
+document.querySelectorAll('input[name=socCat]').forEach(r=>r.addEventListener('change',calc));
+document.querySelectorAll('input[name=houCat]').forEach(r=>r.addEventListener('change',calc));
+document.querySelectorAll('input[name=expRegion]').forEach(r=>r.addEventListener('change',calc));
+$('colAmt').addEventListener('input', calc);
+$('dbgOn').addEventListener('change', calc);
+
+function calc(){
+  const trace = {};
+  const scaleKey = scaleSel.value, g = gradeSel.value, stepIdx = Number(stepSel.value);
+  trace.scaleKey = scaleKey; trace.grade = g; trace.stepIdx = stepIdx;
+
+  const gradeArr = SCALES[scaleKey].grades[g];
+  trace.gradeArrayLength = gradeArr.length;
+  trace.selectedTuple = gradeArr[stepIdx]; // [label, value] actually being read
+  const basic = gradeArr[stepIdx][1];
+  trace.basic = basic;
+  $('rBasic').textContent = fmt(basic);
+
+  // Social
+  const socTable = SOCIAL[scaleKey];
+  const socRow = socTable ? socTable[g] : null;
+  trace.social = {tableHasScale: !!socTable, rowForGrade: socRow};
+  $('socUnavail').textContent = socRow ? '' : 'No social allowance defined for this scale/grade in the source table.';
+  $('socOn').disabled = !socRow; if(!socRow) $('socOn').checked=false;
+  let socVal = null, socCatMissing = false;
+  if($('socOn').checked && socRow){
+    const cat = Number(document.querySelector('input[name=socCat]:checked').value);
+    socVal = socRow[cat];
+    if(socVal===null || socVal===undefined) socCatMissing = true;
+  }
+  $('rSoc').textContent = !$('socOn').checked ? '—' : (socCatMissing ? 'Not published for this category' : fmt(socVal));
+  trace.social.included = $('socOn').checked;
+  trace.social.categoryIndex = $('socOn').checked ? Number(document.querySelector('input[name=socCat]:checked').value) : null;
+  trace.social.value = socVal;
+
+  // Housing
+  const houTable = HOUSING[scaleKey];
+  const houRow = houTable ? houTable[g] : null;
+  trace.housing = {tableHasScale: !!houTable, rowForGrade: houRow};
+  $('houUnavail').textContent = houRow ? '' : 'No housing allowance defined for this scale/grade in the source table.';
+  $('houOn').disabled = !houRow; if(!houRow) $('houOn').checked=false;
+  let houVal = null, houCatMissing = false;
+  if($('houOn').checked && houRow){
+    const cat = Number(document.querySelector('input[name=houCat]:checked').value);
+    houVal = houRow[cat];
+    if(houVal===null || houVal===undefined) houCatMissing = true;
+  }
+  $('rHou').textContent = !$('houOn').checked ? '—' : (houCatMissing ? 'Not published for this category' : fmt(houVal));
+  trace.housing.included = $('houOn').checked;
+  trace.housing.categoryIndex = $('houOn').checked ? Number(document.querySelector('input[name=houCat]:checked').value) : null;
+  trace.housing.value = houVal;
+
+  // Expatriation
+  const expTable = EXPAT[scaleKey];
+  const region = document.querySelector('input[name=expRegion]:checked').value;
+  const expRow = expTable && expTable[region] ? expTable[region][g] : null;
+  const expVal = ($('expOn').checked && expRow) ? expRow[stepIdx] : null;
+  $('expUnavail').textContent = expRow ? '' : 'No expatriation allowance defined for this scale/grade in the source table.';
+  $('expOn').disabled = !expRow; if(!expRow) $('expOn').checked=false;
+  $('rExp').textContent = $('expOn').checked ? fmt(expVal) : '—';
+  trace.expatriation = {
+    tableHasScale: !!expTable, region, rowForGrade: expRow,
+    stepIdxUsedForLookup: stepIdx, note: 'expat arrays are plain (not [label,value]) — indexed directly by the SAME stepIdx as the basic-salary tuple array, so their step alignment depends on the basic array not being reordered.',
+    included: $('expOn').checked, value: expVal
+  };
+
+  // Cost of living
+  const colTable = COST_OF_LIVING[scaleKey];
+  const colAutoRate = colTable ? colTable[g] : null; // null/undefined = not published for this grade
+  const colHasAuto = (colAutoRate !== null && colAutoRate !== undefined);
+  $('colManualWrap').style.display = colHasAuto ? 'none' : 'block';
+  $('colAutoNote').textContent = colHasAuto
+    ? 'Official rate for this grade: ' + colAutoRate.toLocaleString() + ' BHD/month (flat per grade, not per step).'
+    : '';
+  const colVal = $('colOn').checked ? (colHasAuto ? colAutoRate : (Number($('colAmt').value)||0)) : null;
+  $('rCol').textContent = $('colOn').checked ? fmt(colVal) : '—';
+  trace.costOfLiving = {tableHasScale: !!colTable, autoRate: colAutoRate, usingAuto: colHasAuto, included: $('colOn').checked, value: colVal};
+
+  const total = basic + (socVal||0) + (houVal||0) + (expVal||0) + (colVal||0);
+  $('rTotal').textContent = fmt(total) + (socCatMissing||houCatMissing ? ' (excludes unpublished categories above)' : '');
+  trace.total = {basic, social: socVal||0, housing: houVal||0, expatriation: expVal||0, costOfLiving: colVal||0, sum: total};
+
+  if($('dbgOn').checked){
+    $('dbgOut').style.display='block';
+    $('dbgOut').textContent = JSON.stringify(trace, null, 2);
+  } else {
+    $('dbgOut').style.display='none';
+  }
+  console.log('calc() trace:', trace);
+}
+
+populateGrades();
+calc();
+</script>
+</body>
+</html>
